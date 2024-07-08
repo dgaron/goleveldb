@@ -64,8 +64,8 @@ type block struct {
 func (b *block) seek(cmp comparer.Comparer, rstart, rlimit int, key []byte) (index, offset int, err error) {
 
 	i := b.restartsLen - rstart - (b.restartsLen - rlimit)
-	tmp_offset := int(binary.LittleEndian.Uint32(b.data[b.restartsOffset+4*(rstart+i):]))
-	tmp_offset++                                // shared always zero, since this is a restart point
+	offset = int(binary.LittleEndian.Uint32(b.data[b.restartsOffset+4*(rstart+i):]))
+	offset++                                    // shared always zero, since this is a restart point
 	v1, n1 := binary.Uvarint(b.data[offset:])   // key length
 	_, n2 := binary.Uvarint(b.data[offset+n1:]) // value length
 	m := offset + n1 + n2
