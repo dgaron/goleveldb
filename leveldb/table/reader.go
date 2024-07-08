@@ -62,6 +62,25 @@ type block struct {
 }
 
 func (b *block) seek(cmp comparer.Comparer, rstart, rlimit int, key []byte) (index, offset int, err error) {
+
+	i := b.restartsLen - rstart - (b.restartsLen - rlimit)
+	tmp_offset := int(binary.LittleEndian.Uint32(b.data[b.restartsOffset+4*(rstart+i):]))
+	tmp_offset++                                // shared always zero, since this is a restart point
+	v1, n1 := binary.Uvarint(b.data[offset:])   // key length
+	_, n2 := binary.Uvarint(b.data[offset+n1:]) // value length
+	m := offset + n1 + n2
+	current_key_compare := cmp.Compare(b.data[m:m+int(v1)], key)
+	if current_key_compare < 0 {
+		// key_ is smaller than target
+		rstart = b.restartsOffset
+	} else if current_key_compare > 0 {
+		rlimit = b.restartsOffset
+	} else {
+		// We're seeking to the key we're already at.
+		offset = int(binary.LittleEndian.Uint32(b.data[b.restartsOffset+4*index:]))
+		return
+	}
+
 	index = sort.Search(b.restartsLen-rstart-(b.restartsLen-rlimit), func(i int) bool {
 		offset := int(binary.LittleEndian.Uint32(b.data[b.restartsOffset+4*(rstart+i):]))
 		offset++                                    // shared always zero, since this is a restart point
